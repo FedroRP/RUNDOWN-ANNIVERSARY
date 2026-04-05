@@ -186,8 +186,9 @@
                         <table class="w-full text-left">
                             <thead class="bg-pink-50 text-pink-600 border-b-2 border-pink-100">
                                 <tr>
-                                    <th class="p-5 font-bold">Waktu & Tanggal</th>
-                                    <th class="p-5 font-bold">Rencana Aktivitas</th>
+                                    <th class="p-5 font-bold whitespace-nowrap">Waktu & Tanggal</th>
+                                    <th class="p-5 font-bold whitespace-nowrap">Rencana Aktivitas</th>
+                                    <th class="p-5 font-bold whitespace-nowrap">Detail Aktivitas</th>
                                 </tr>
                             </thead>
                             <tbody id="summaryTableBody" class="divide-y divide-pink-50 text-gray-700">
@@ -249,6 +250,7 @@
     </div>
 
     <script>
+        // URL Web App Terbaru
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH13UHn1pu8UnGcCTcqvJVN76hpEy8Bbp8yllh87oEl-Ba-qWoHIFTZ33qWiFouJaOGQ/exec";
         
         let rundownData = [];
@@ -415,7 +417,7 @@
                     timeline.appendChild(card);
                 }
 
-                // Render Table
+                // Render Table (Summary dengan Detail Aktivitas)
                 if (table) {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-pink-50/50 transition-colors";
@@ -424,7 +426,8 @@
                             <div class="font-bold text-pink-500">${displayTime}</div>
                             <div class="text-[10px] text-pink-300 uppercase font-bold">${displayDate}</div>
                         </td>
-                        <td class="p-5 font-medium text-gray-700">${item.title}</td>
+                        <td class="p-5 font-bold text-gray-700">${item.title}</td>
+                        <td class="p-5 text-gray-500 text-sm italic">${item.desc || '-'}</td>
                     `;
                     table.appendChild(row);
                 }
@@ -436,7 +439,6 @@
             const item = rundownData.find(d => d.id === id);
             document.getElementById('editId').value = item.id;
             
-            // Format date for input type="date" (YYYY-MM-DD)
             if (item.date) {
                 const d = new Date(item.date);
                 const year = d.getFullYear();
