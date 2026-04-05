@@ -1,7 +1,8 @@
 <!-- 
-  PENTING: 
-  1. Pastikan nama file ini adalah index.html saat diunggah ke GitHub.
-  2. Data sekarang disimpan di Cloud Database sehingga bisa dilihat oleh orang lain.
+  PENTING UNTUK GITHUB:
+  1. Pastikan nama file ini adalah index.html.
+  2. Karena di GitHub variabel database (__firebase_config) tidak tersedia secara otomatis, 
+     saya menambahkan proteksi agar aplikasi tidak macet (stuck) di layar loading.
 -->
 <!DOCTYPE html>
 <html lang="id">
@@ -81,7 +82,7 @@
         .loading-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.95);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -94,9 +95,10 @@
 
     <!-- Loading Screen -->
     <div id="loadingOverlay" class="loading-overlay">
-        <div class="text-center">
+        <div class="text-center px-6">
             <i data-lucide="heart" class="animate-bounce text-pink-400 fill-pink-200 w-12 h-12 mx-auto"></i>
-            <p class="text-pink-400 font-bold mt-2">Menghubungkan ke Cloud...</p>
+            <p class="text-pink-400 font-bold mt-2" id="loadingText">Menghubungkan ke Cloud...</p>
+            <p id="fallbackMsg" class="text-gray-400 text-xs mt-4 hidden">GitHub detected: Mengaktifkan mode penyimpanan lokal...</p>
         </div>
     </div>
 
@@ -120,7 +122,7 @@
         <!-- Header -->
         <header class="text-center mb-6">
             <h1 class="text-4xl md:text-5xl font-pacifico text-pink-500 mb-2">Anniversary Rundown</h1>
-            <p class="text-pink-400 font-semibold italic text-sm md:text-base">"Data tersimpan di Cloud agar kita berdua bisa melihat!" ✨</p>
+            <p id="cloudBadge" class="text-pink-400 font-semibold italic text-sm md:text-base">"Setiap orang bisa melihat rencana spesial kita!" ✨</p>
         </header>
 
         <!-- Tab Navigation -->
@@ -226,123 +228,163 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Configuration (Global Variables provided by the environment)
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // --- PROTEKSI GITHUB PAGES ---
+        // Jika kode dijalankan di GitHub, variabel __firebase_config tidak ada.
+        // Kita cegah ReferenceError agar aplikasi tidak stuck.
+        let firebaseConfig = null;
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch (e) {
+            console.warn("Konfigurasi Cloud tidak ditemukan.");
+        }
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let isCloudMode = !!firebaseConfig;
+
+        // UI Helpers
+        const hideLoading = () => {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.classList.add('hidden'), 500);
+        };
 
         // State
         let rundownData = [];
         let user = null;
-        let unsubscribeStore = null;
 
-        // Path Koleksi Publik (Sesuai Rule 1)
-        const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'rundown');
+        if (isCloudMode) {
+            // FIREBASE MODE
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'rundown');
 
-        // Authentication Flow (Sesuai Rule 3)
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Auth error:", error);
+                    switchToLocalMode();
                 }
-            } catch (error) {
-                console.error("Auth failed:", error);
-                document.getElementById('loadingOverlay').innerHTML = `<div class="text-center p-4">
-                    <p class="text-red-500 font-bold">Gagal terhubung. Coba refresh halaman.</p>
-                </div>`;
-            }
-        };
+            };
 
-        // Listen for Auth changes
-        onAuthStateChanged(auth, (authUser) => {
-            user = authUser;
-            if (user) {
-                document.getElementById('loadingOverlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 500);
-                setupRealtimeListener();
-            }
-        });
+            onAuthStateChanged(auth, (authUser) => {
+                user = authUser;
+                if (user) {
+                    hideLoading();
+                    setupRealtimeListener(collectionPath, db, appId);
+                }
+            });
 
-        // Start Auth
-        initAuth();
+            initAuth();
 
-        // Real-time Data Listener (Protected by User check)
-        function setupRealtimeListener() {
-            if (!user) return;
+            // CRUD Methods (Cloud)
+            window.saveEvent = async () => {
+                const time = document.getElementById('eventTime').value;
+                const title = document.getElementById('eventTitle').value;
+                const desc = document.getElementById('eventDesc').value;
+                if (!time || !title) return alert("Isi jam dan judul ya! ❤️");
+                
+                try {
+                    await addDoc(collectionPath, { time, title, desc, createdAt: Date.now() });
+                    clearForm();
+                } catch (e) { alert("Gagal simpan ke Cloud."); }
+            };
+
+            window.deleteEvent = async (id) => {
+                if (confirm("Hapus? 🥺")) {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id));
+                }
+            };
+
+            window.updateEvent = async () => {
+                const id = document.getElementById('editId').value;
+                const time = document.getElementById('editTime').value;
+                const title = document.getElementById('editTitle').value;
+                const desc = document.getElementById('editDesc').value;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id), { time, title, desc });
+                closeEditModal();
+            };
+
+        } else {
+            // LOCAL MODE (GITHUB FALLBACK)
+            switchToLocalMode();
+        }
+
+        function switchToLocalMode() {
+            isCloudMode = false;
+            document.getElementById('cloudBadge').innerText = '"Mode Offline: Data tersimpan di HP/Laptop ini saja" ✨';
+            document.getElementById('fallbackMsg').classList.remove('hidden');
             
-            if (unsubscribeStore) unsubscribeStore();
+            setTimeout(() => {
+                hideLoading();
+                loadLocalData();
+            }, 1500);
 
-            unsubscribeStore = onSnapshot(collectionPath, (snapshot) => {
-                rundownData = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
+            window.saveEvent = () => {
+                const time = document.getElementById('eventTime').value;
+                const title = document.getElementById('eventTitle').value;
+                const desc = document.getElementById('eventDesc').value;
+                if (!time || !title) return alert("Isi jam dan judul ya! ❤️");
+                
+                rundownData.push({ id: Date.now().toString(), time, title, desc });
+                saveLocalData();
+                clearForm();
                 renderViews();
-            }, (error) => {
-                console.error("Firestore sync error:", error);
-                if (error.code === 'permission-denied') {
-                    console.log("Mencoba login ulang karena masalah izin...");
-                    initAuth();
+            };
+
+            window.deleteEvent = (id) => {
+                if (confirm("Hapus? 🥺")) {
+                    rundownData = rundownData.filter(d => d.id !== id);
+                    saveLocalData();
+                    renderViews();
                 }
+            };
+
+            window.updateEvent = () => {
+                const id = document.getElementById('editId').value;
+                const time = document.getElementById('editTime').value;
+                const title = document.getElementById('editTitle').value;
+                const desc = document.getElementById('editDesc').value;
+                
+                const idx = rundownData.findIndex(d => d.id === id);
+                if (idx !== -1) rundownData[idx] = { id, time, title, desc };
+                
+                saveLocalData();
+                closeEditModal();
+                renderViews();
+            };
+        }
+
+        function setupRealtimeListener(path) {
+            onSnapshot(path, (snapshot) => {
+                rundownData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderViews();
             });
         }
 
-        // Global functions for HTML access
-        window.saveEvent = async () => {
-            if (!user) {
-                alert("Harap tunggu hingga koneksi database stabil...");
-                return;
-            }
-            
-            const time = document.getElementById('eventTime').value;
-            const title = document.getElementById('eventTitle').value;
-            const desc = document.getElementById('eventDesc').value;
+        function loadLocalData() {
+            rundownData = JSON.parse(localStorage.getItem('anniversary_local')) || [];
+            renderViews();
+        }
 
-            if (!time || !title) {
-                alert("Jam dan Judul harus diisi ya! ❤️");
-                return;
-            }
+        function saveLocalData() {
+            localStorage.setItem('anniversary_local', JSON.stringify(rundownData));
+        }
 
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
+        function clearForm() {
+            document.getElementById('eventTime').value = '';
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventDesc').value = '';
+        }
 
-            try {
-                await addDoc(collectionPath, { 
-                    time, 
-                    title, 
-                    desc, 
-                    createdAt: Date.now(),
-                    createdBy: user.uid
-                });
-                document.getElementById('eventTime').value = '';
-                document.getElementById('eventTitle').value = '';
-                document.getElementById('eventDesc').value = '';
-            } catch (err) {
-                console.error("Error saving:", err);
-                alert("Gagal menyimpan data. Periksa koneksi internet.");
-            } finally {
-                btn.disabled = false;
-            }
-        };
-
-        window.deleteEvent = async (id) => {
-            if (!user) return;
-            if (confirm("Hapus rencana ini? 🥺")) {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id);
-                    await deleteDoc(docRef);
-                } catch (err) {
-                    console.error("Error deleting:", err);
-                }
-            }
-        };
-
+        // Global functions (Shared)
         window.openEditModal = (id) => {
             const item = rundownData.find(d => d.id === id);
             if (!item) return;
@@ -353,131 +395,70 @@
             document.getElementById('editModal').classList.replace('hidden', 'flex');
         };
 
-        window.closeEditModal = () => {
-            document.getElementById('editModal').classList.replace('flex', 'hidden');
-        };
-
-        window.updateEvent = async () => {
-            if (!user) return;
-            const id = document.getElementById('editId').value;
-            const time = document.getElementById('editTime').value;
-            const title = document.getElementById('editTitle').value;
-            const desc = document.getElementById('editDesc').value;
-
-            if (!time || !title) return;
-
-            const btn = document.getElementById('updateBtn');
-            btn.disabled = true;
-
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id);
-                await updateDoc(docRef, { time, title, desc });
-                closeEditModal();
-            } catch (err) {
-                console.error("Error updating:", err);
-            } finally {
-                btn.disabled = false;
-            }
-        };
+        window.closeEditModal = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
 
         window.switchTab = (tab) => {
-            const timelineBtn = document.getElementById('tab-timeline');
-            const summaryBtn = document.getElementById('tab-summary');
-            const timelineView = document.getElementById('timelineView');
-            const summaryView = document.getElementById('summaryView');
-            const inputFormCard = document.getElementById('inputFormCard');
-
-            if (tab === 'timeline') {
-                timelineBtn.className = 'active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2';
-                summaryBtn.className = 'text-pink-400 px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 hover:bg-pink-50';
-                timelineView.classList.remove('hidden');
-                summaryView.classList.add('hidden');
-                inputFormCard.classList.remove('hidden');
-            } else {
-                summaryBtn.className = 'active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2';
-                timelineBtn.className = 'text-pink-400 px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 hover:bg-pink-50';
-                timelineView.classList.add('hidden');
-                summaryView.classList.remove('hidden');
-                inputFormCard.classList.add('hidden');
-            }
+            const isTimeline = tab === 'timeline';
+            document.getElementById('tab-timeline').className = isTimeline ? 'active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2' : 'text-pink-400 px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 hover:bg-pink-50';
+            document.getElementById('tab-summary').className = !isTimeline ? 'active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2' : 'text-pink-400 px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 hover:bg-pink-50';
+            document.getElementById('timelineView').classList.toggle('hidden', !isTimeline);
+            document.getElementById('summaryView').classList.toggle('hidden', isTimeline);
+            document.getElementById('inputFormCard').classList.toggle('hidden', !isTimeline);
         };
 
         window.toggleMusic = () => {
-            const bgMusic = document.getElementById('bgMusic');
-            const musicBtn = document.getElementById('musicBtn');
-            const musicPulse = document.getElementById('musicPulse');
-            
-            if (!bgMusic.paused) {
-                bgMusic.pause();
-                musicBtn.classList.remove('music-active');
-                musicPulse.classList.add('hidden');
+            const music = document.getElementById('bgMusic');
+            const btn = document.getElementById('musicBtn');
+            const pulse = document.getElementById('musicPulse');
+            if (music.paused) {
+                music.play().then(() => {
+                    btn.classList.add('music-active');
+                    pulse.classList.remove('hidden');
+                }).catch(() => alert("Klik lagi untuk memutar musik! ❤️"));
             } else {
-                bgMusic.play().then(() => {
-                    musicBtn.classList.add('music-active');
-                    musicPulse.classList.remove('hidden');
-                }).catch(e => console.log("Audio play deferred until user interaction"));
+                music.pause();
+                btn.classList.remove('music-active');
+                pulse.classList.add('hidden');
             }
         };
 
         function renderViews() {
-            // Sort by time in-memory
             rundownData.sort((a, b) => a.time.localeCompare(b.time));
-
-            const timelineContainer = document.getElementById('timelineView');
-            timelineContainer.innerHTML = '';
-
-            if (rundownData.length === 0) {
-                timelineContainer.innerHTML = `
-                    <div class="bg-white/50 p-8 rounded-2xl text-center text-pink-300 border-2 border-dashed border-pink-200 ml-12 md:ml-0">
-                        <p>Belum ada jadwal. Yuk tambah rencana serumu!</p>
-                    </div>
-                `;
-                document.getElementById('summaryEmptyMsg').classList.remove('hidden');
-            } else {
-                document.getElementById('summaryEmptyMsg').classList.add('hidden');
-            }
+            const container = document.getElementById('timelineView');
+            container.innerHTML = rundownData.length ? '' : `<div class="bg-white/50 p-8 rounded-2xl text-center text-pink-300 border-2 border-dashed border-pink-200 ml-12 md:ml-0"><p>Belum ada jadwal. Yuk tambah rencana serumu!</p></div>`;
 
             rundownData.forEach((item) => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'relative animate-fade-in-up';
-                itemEl.innerHTML = `
-                    <div class="absolute -left-[44px] top-4 w-10 h-10 bg-pink-400 rounded-full flex items-center justify-center border-4 border-white shadow-md z-10">
-                        <i data-lucide="star" class="text-white fill-white" size="16"></i>
-                    </div>
+                const el = document.createElement('div');
+                el.className = 'relative animate-fade-in-up';
+                el.innerHTML = `
+                    <div class="absolute -left-[44px] top-4 w-10 h-10 bg-pink-400 rounded-full flex items-center justify-center border-4 border-white shadow-md z-10"><i data-lucide="star" class="text-white fill-white" size="16"></i></div>
                     <div class="glass-card rounded-2xl p-5 hover:translate-x-2 transition-transform duration-300 cute-shadow">
                         <div class="flex justify-between items-start mb-1">
                             <span class="text-pink-600 font-bold text-lg">${item.time}</span>
                             <div class="flex gap-2">
-                                <button onclick="openEditModal('${item.id}')" class="text-blue-400 hover:text-blue-600 p-1">
-                                    <i data-lucide="pencil" size="16"></i>
-                                </button>
-                                <button onclick="deleteEvent('${item.id}')" class="text-red-400 hover:text-red-600 p-1">
-                                    <i data-lucide="trash-2" size="16"></i>
-                                </button>
+                                <button onclick="openEditModal('${item.id}')" class="text-blue-400 hover:text-blue-600 p-1"><i data-lucide="pencil" size="16"></i></button>
+                                <button onclick="deleteEvent('${item.id}')" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" size="16"></i></button>
                             </div>
                         </div>
                         <h3 class="text-gray-800 font-bold text-xl mb-1">${item.title}</h3>
                         <p class="text-gray-500 text-sm italic">${item.desc || '-'}</p>
-                    </div>
-                `;
-                timelineContainer.appendChild(itemEl);
+                    </div>`;
+                container.appendChild(el);
             });
 
             const tableBody = document.getElementById('summaryTableBody');
-            tableBody.innerHTML = '';
-            rundownData.forEach((item) => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-pink-50/50 transition-colors';
-                row.innerHTML = `
-                    <td class="p-4 font-bold text-pink-500 whitespace-nowrap">${item.time}</td>
+            tableBody.innerHTML = rundownData.map(item => `
+                <tr class="hover:bg-pink-50/50 transition-colors">
+                    <td class="p-4 font-bold text-pink-500">${item.time}</td>
                     <td class="p-4 font-bold text-sm md:text-base">${item.title}</td>
                     <td class="p-4 text-xs md:text-sm text-gray-500 italic">${item.desc || '-'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+                </tr>`).join('');
             
+            document.getElementById('summaryEmptyMsg').classList.toggle('hidden', rundownData.length > 0);
             lucide.createIcons();
         }
+
+        lucide.createIcons();
     </script>
 </body>
 </html>
