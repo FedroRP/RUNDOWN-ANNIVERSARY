@@ -13,7 +13,7 @@
     <style>
         body {
             font-family: 'Quicksand', sans-serif;
-            background: #fff3f5; /* Background pink pucat sesuai gambar */
+            background: #fff3f5;
             min-height: 100vh;
             color: #4a4a4a;
         }
@@ -21,8 +21,8 @@
         
         .glass-card {
             background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(255, 182, 193, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(255, 182, 193, 0.15);
         }
 
         .active-tab {
@@ -31,7 +31,6 @@
             box-shadow: 0 4px 12px rgba(255, 159, 178, 0.3);
         }
 
-        /* Styling Timeline sesuai gambar */
         .timeline-item {
             position: relative;
             padding-left: 45px;
@@ -66,12 +65,6 @@
             color: #ff9fb2;
             box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-        /* Ikon hati di dalam dot saat aktif */
-        .timeline-dot i {
-            fill: #ff9fb2;
-            width: 16px;
-            height: 16px;
-        }
 
         .input-field {
             width: 100%;
@@ -83,10 +76,7 @@
             font-size: 0.875rem;
             transition: all 0.2s;
         }
-        .input-field:focus {
-            border-color: #ff9fb2;
-            box-shadow: 0 0 0 3px rgba(255, 159, 178, 0.1);
-        }
+        .input-field:focus { border-color: #ff9fb2; }
 
         .btn-save {
             background: #f472b6;
@@ -100,11 +90,8 @@
             justify-content: center;
             gap: 8px;
             box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);
-            transition: transform 0.1s;
         }
-        .btn-save:active { transform: scale(0.98); }
 
-        /* Badge Tanggal & Jam sesuai target gambar */
         .badge {
             font-size: 10px;
             font-weight: 700;
@@ -140,7 +127,6 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Loader -->
     <div id="loader" class="loading-screen hidden">
         <div class="animate-bounce text-pink-400">
             <i data-lucide="heart" class="fill-current w-12 h-12"></i>
@@ -154,7 +140,6 @@
             <p class="text-pink-400 text-sm italic">"Kita buat moment yang sangat indah dan berkesan" ✨</p>
         </header>
 
-        <!-- Navigasi Tab -->
         <nav class="flex justify-center mb-8">
             <div class="bg-white/80 p-1 rounded-2xl flex gap-1 shadow-sm border border-white">
                 <button onclick="switchTab('timeline')" id="tab-timeline" class="active-tab px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
@@ -169,7 +154,6 @@
             </div>
         </nav>
 
-        <!-- Form Input -->
         <section id="inputFormCard" class="glass-card p-6 mb-10 relative animate-fade-in">
             <div class="absolute -top-2 -right-2 bg-pink-400 text-white text-[10px] px-3 py-1 rounded-lg font-bold shadow-sm">NEW ✨</div>
             <h2 class="text-pink-600 font-bold mb-4 flex items-center gap-2">
@@ -202,11 +186,8 @@
             </button>
         </section>
 
-        <!-- Area Konten Utama -->
         <main>
-            <div id="timelineView" class="space-y-0">
-                <!-- Konten akan dimuat via JS -->
-            </div>
+            <div id="timelineView" class="space-y-0"></div>
 
             <div id="summaryView" class="hidden animate-fade-in">
                 <div class="glass-card overflow-hidden">
@@ -228,7 +209,6 @@
 
             <div id="memoriesView" class="hidden animate-fade-in">
                 <div class="glass-card p-8 text-center italic text-gray-500 text-sm leading-relaxed space-y-4">
-                    <p>Langit biru membentang luas di angkasa...</p>
                     <p>Setiap momen yang kita tulis adalah sejarah kecil kita.</p>
                     <p class="font-bold text-pink-500 not-italic">💖 Happy Anniversary 💖</p>
                 </div>
@@ -243,21 +223,13 @@
     <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-[100] backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-fade-in">
-            <h2 class="text-lg font-bold text-pink-600 mb-4 flex items-center gap-2">
-                <i data-lucide="edit-3" size="18"></i> Edit Rencana
-            </h2>
+            <h2 class="text-lg font-bold text-pink-600 mb-4 flex items-center gap-2"><i data-lucide="edit-3" size="18"></i> Edit Rencana</h2>
             <input type="hidden" id="editId">
             <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-bold text-pink-300 ml-1">Tanggal</label>
-                    <input type="date" id="editDate" class="input-field">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-pink-300 ml-1">Jam</label>
-                    <input type="time" id="editTime" class="input-field">
-                </div>
-                <input type="text" id="editTitle" class="input-field" placeholder="Nama Aktivitas">
-                <textarea id="editDesc" rows="2" class="input-field" placeholder="Detail Lokasi/Catatan"></textarea>
+                <input type="date" id="editDate" class="input-field">
+                <input type="time" id="editTime" class="input-field">
+                <input type="text" id="editTitle" class="input-field" placeholder="Aktivitas">
+                <textarea id="editDesc" rows="2" class="input-field" placeholder="Detail"></textarea>
                 <div class="flex gap-2 pt-2">
                     <button onclick="closeEditModal()" class="flex-1 py-3 text-sm font-bold text-gray-400 bg-gray-50 rounded-xl">Batal</button>
                     <button onclick="updateEvent()" class="flex-1 py-3 text-sm font-bold bg-pink-400 text-white rounded-xl shadow-md">Simpan</button>
@@ -267,15 +239,13 @@
     </div>
 
     <script>
-        // MASUKKAN URL WEB APP APPS SCRIPT KAMU DI SINI
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxH13UHn1pu8UnGcCTcqvJVN76hpEy8Bbp8yllh87oEl-Ba-qWoHIFTZ33qWiFouJaOGQ/exec";
-        
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby84ZlLhYsu-agrovi5Uxa7EHwdG1Nnl-CqHjRSEckk39AdY9esfG6CGAVtb4_ALRwMaA/exec";
         let rundownData = [];
 
         const toggleLoader = (show) => document.getElementById('loader').classList.toggle('hidden', !show);
 
         function formatDisplayDate(dateStr) {
-            if (!dateStr || dateStr.includes("1899")) return "No Date";
+            if (!dateStr || dateStr.includes("1899")) return "Today";
             try {
                 const date = new Date(dateStr);
                 if (isNaN(date.getTime())) return "No Date";
@@ -285,16 +255,22 @@
 
         function formatTime(timeStr) {
             if (!timeStr) return "00:00";
-            if (typeof timeStr === 'string' && timeStr.includes(':')) {
-                return timeStr.substring(0, 5);
+            let str = timeStr.toString();
+            
+            // Jika format ISO (ada 'T'), ambil bagian jamnya saja
+            if (str.includes('T')) {
+                str = str.split('T')[1];
             }
-            try {
-                const d = new Date(timeStr);
-                if (!isNaN(d.getTime())) {
-                    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
-                }
-            } catch (e) {}
-            return timeStr;
+            
+            // Gunakan RegEx untuk mencari format HH:mm di dalam string
+            const timeMatch = str.match(/(\d{2}:\d{2})/);
+            if (timeMatch) {
+                return timeMatch[1];
+            }
+            
+            // Fallback: jika tidak ada kecocokan, ambil 5 karakter pertama tapi pastikan bukan "1899"
+            if (str.startsWith("1899")) return "00:00";
+            return str.substring(0, 5);
         }
 
         function setDefaultInputs() {
@@ -309,7 +285,7 @@
                 const res = await fetch(SCRIPT_URL);
                 rundownData = await res.json();
                 render();
-            } catch (e) { console.error("Gagal ambil data:", e); }
+            } catch (e) { console.error(e); }
             finally { toggleLoader(false); }
         }
 
@@ -319,7 +295,7 @@
             const title = document.getElementById('eventTitle').value;
             const desc = document.getElementById('eventDesc').value;
             
-            if (!date || !time || !title) return alert("Isi tanggal, jam, dan aktivitas dulu ya! ❤️");
+            if (!date || !time || !title) return alert("Lengkapi data dulu ya! ❤️");
             
             toggleLoader(true);
             try {
@@ -327,7 +303,7 @@
                     method: 'POST',
                     body: JSON.stringify({ 
                         action: 'add', 
-                        data: { date, time, title, desc } 
+                        data: { date: date, time: time, title: title, desc: desc } 
                     })
                 });
                 document.getElementById('eventTitle').value = '';
@@ -343,15 +319,11 @@
             const time = document.getElementById('editTime').value;
             const title = document.getElementById('editTitle').value;
             const desc = document.getElementById('editDesc').value;
-            
             toggleLoader(true);
             try {
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ 
-                        action: 'update', 
-                        data: { id, date, time, title, desc } 
-                    })
+                    body: JSON.stringify({ action: 'update', data: { id, date, time, title, desc } })
                 });
                 closeEditModal();
                 await fetchEvents();
@@ -373,7 +345,6 @@
         }
 
         function render() {
-            // Urutan kronologis berdasarkan waktu
             rundownData.sort((a, b) => {
                 const da = new Date((a.date || '1970-01-01').split('T')[0] + 'T' + (a.time || '00:00'));
                 const db = new Date((b.date || '1970-01-01').split('T')[0] + 'T' + (b.time || '00:00'));
@@ -382,8 +353,7 @@
 
             const timeline = document.getElementById('timelineView');
             const table = document.getElementById('summaryTableBody');
-            
-            timeline.innerHTML = rundownData.length === 0 ? '<p class="text-center text-pink-300 py-10 text-sm">Belum ada rencana manis... Yuk buat!</p>' : '';
+            timeline.innerHTML = rundownData.length === 0 ? '<p class="text-center text-pink-300 py-10 text-sm">Belum ada rencana...</p>' : '';
             table.innerHTML = '';
 
             rundownData.forEach((item) => {
@@ -392,12 +362,11 @@
                 const activityTitle = item.title || "Tanpa Judul";
                 const activityDesc = item.desc || "-";
 
-                // Render Timeline (Sesuai Desain Target)
                 const card = document.createElement('div');
                 card.className = 'timeline-item animate-fade-in';
                 card.innerHTML = `
-                    <div class="timeline-dot"><i data-lucide="heart" class="fill-current"></i></div>
-                    <div class="glass-card p-5 hover:translate-x-1 transition-transform">
+                    <div class="timeline-dot"><i data-lucide="heart" class="fill-current" size="14"></i></div>
+                    <div class="glass-card p-5">
                         <div class="flex justify-between items-center mb-3">
                             <div class="flex gap-2">
                                 <span class="badge badge-date"><i data-lucide="calendar" size="10"></i> ${displayDate}</span>
@@ -414,7 +383,6 @@
                 `;
                 timeline.appendChild(card);
 
-                // Render Summary Table
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="p-4 font-bold text-pink-500">${displayTime}<br><span class="text-[9px] text-pink-300 font-normal uppercase">${displayDate}</span></td>
@@ -445,22 +413,15 @@
         function switchTab(tab) {
             const views = { timeline: 'timelineView', summary: 'summaryView', memories: 'memoriesView' };
             const tabs = { timeline: 'tab-timeline', summary: 'tab-summary', memories: 'tab-memories' };
-            
             Object.values(views).forEach(v => document.getElementById(v).classList.add('hidden'));
             Object.values(tabs).forEach(t => document.getElementById(t).classList.remove('active-tab'));
-            
             document.getElementById(views[tab]).classList.remove('hidden');
             document.getElementById(tabs[tab]).classList.add('active-tab');
-            
-            // Sembunyikan form input jika bukan tab timeline
             document.getElementById('inputFormCard').classList.toggle('hidden', tab !== 'timeline');
             lucide.createIcons();
         }
 
-        window.onload = () => {
-            setDefaultInputs();
-            fetchEvents();
-        };
+        window.onload = () => { setDefaultInputs(); fetchEvents(); };
     </script>
 </body>
 </html>
