@@ -3,15 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aplikasi Rundown Anniversary Lucu untuk merencanakan momen spesial bersama pasangan.">
+    <meta name="author" content="Your Name">
     <title>Our Special Anniversary Rundown ✨</title>
+    
+    <!-- Favicon (Emoji Hati) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💖</text></svg>">
+
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Pacifico&display=swap" rel="stylesheet">
+    
     <style>
         body {
             font-family: 'Quicksand', sans-serif;
             background: linear-gradient(135deg, #fff5f5 0%, #fff0f6 100%);
             min-height: 100vh;
+            scroll-behavior: smooth;
         }
         .font-pacifico {
             font-family: 'Pacifico', cursive;
@@ -55,17 +64,28 @@
         .music-active {
             animation: heart-pulse 1.5s ease-in-out infinite;
         }
+        /* Mengatur tampilan scrollbar agar tetap lucu */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fff5f5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffb6c1;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Audio Element (Selected Romantic Music) -->
-    <audio id="bgMusic" loop>
+    <!-- Audio Element (Romantic Background Music) -->
+    <audio id="bgMusic" loop preload="auto">
         <source src="https://www.chosic.com/wp-content/uploads/2021/04/Warm-Memories-Emotional-Inspiring-Piano.mp3" type="audio/mpeg">
     </audio>
 
     <!-- Music Toggle Button -->
-    <button onclick="toggleMusic()" id="musicBtn" class="fixed bottom-6 left-6 z-50 glass-card p-4 rounded-full text-pink-500 shadow-xl border-2 border-pink-200 transition-all active:scale-95 group">
+    <button onclick="toggleMusic()" id="musicBtn" class="fixed bottom-6 left-6 z-50 glass-card p-4 rounded-full text-pink-500 shadow-xl border-2 border-pink-200 transition-all active:scale-95 group" aria-label="Toggle Music">
         <div id="musicIconContainer" class="relative">
             <i data-lucide="music" id="musicIcon" size="24"></i>
             <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full hidden" id="musicPulse"></div>
@@ -77,13 +97,13 @@
 
     <div class="max-w-2xl mx-auto">
         <!-- Header -->
-        <div class="text-center mb-6">
+        <header class="text-center mb-6">
             <h1 class="text-4xl md:text-5xl font-pacifico text-pink-500 mb-2">Anniversary Rundown</h1>
             <p class="text-pink-400 font-semibold italic">"Membuat setiap detik menjadi kenangan indah..." ✨</p>
-        </div>
+        </header>
 
         <!-- Tab Navigation -->
-        <div class="flex justify-center mb-8">
+        <nav class="flex justify-center mb-8">
             <div class="glass-card p-1.5 rounded-2xl flex gap-2 cute-shadow">
                 <button onclick="switchTab('timeline')" id="tab-timeline" class="active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2">
                     <i data-lucide="calendar-days" size="18"></i>
@@ -94,65 +114,67 @@
                     Summary
                 </button>
             </div>
-        </div>
+        </nav>
 
         <!-- Input Form Card -->
-        <div id="inputFormCard" class="glass-card rounded-3xl p-6 mb-8 cute-shadow animate-fade-in-up">
+        <section id="inputFormCard" class="glass-card rounded-3xl p-6 mb-8 cute-shadow animate-fade-in-up">
             <h2 class="text-xl font-bold text-pink-600 mb-4 flex items-center gap-2">
                 <i data-lucide="heart" class="fill-pink-500 text-pink-500"></i>
                 Tambah Rencana Baru
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-bold text-pink-400 mb-1">Jam Berapa?</label>
+                    <label for="eventTime" class="block text-sm font-bold text-pink-400 mb-1">Jam Berapa?</label>
                     <input type="time" id="eventTime" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-pink-400 mb-1">Aktivitas Apa?</label>
+                    <label for="eventTitle" class="block text-sm font-bold text-pink-400 mb-1">Aktivitas Apa?</label>
                     <input type="text" id="eventTitle" placeholder="Contoh: Makan Malam Romantis" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50">
                 </div>
             </div>
             <div class="mt-4">
-                <label class="block text-sm font-bold text-pink-400 mb-1">Detail Tambahan (Opsional)</label>
+                <label for="eventDesc" class="block text-sm font-bold text-pink-400 mb-1">Detail Tambahan (Opsional)</label>
                 <textarea id="eventDesc" rows="2" placeholder="Lokasi atau catatan kecil..." class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50"></textarea>
             </div>
-            <button onclick="saveEvent()" id="saveBtn" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200">
+            <button onclick="saveEvent()" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200">
                 <i data-lucide="plus-circle" size="20"></i>
                 Simpan ke Jadwal
             </button>
-        </div>
+        </section>
 
         <!-- View Sections -->
-        <div id="timelineView" class="relative timeline-line pl-12 space-y-6">
-            <!-- Items will be injected here -->
-        </div>
+        <main>
+            <div id="timelineView" class="relative timeline-line pl-12 space-y-6">
+                <!-- Items will be injected here -->
+            </div>
 
-        <div id="summaryView" class="hidden animate-fade-in-up">
-            <div class="glass-card rounded-3xl overflow-hidden cute-shadow">
-                <div class="bg-pink-400 p-4">
-                    <h3 class="text-white font-bold text-center text-lg flex items-center justify-center gap-2">
-                        <i data-lucide="sparkles"></i> Summary Rencana Kita <i data-lucide="sparkles"></i>
-                    </h3>
+            <div id="summaryView" class="hidden animate-fade-in-up">
+                <div class="glass-card rounded-3xl overflow-hidden cute-shadow">
+                    <div class="bg-pink-400 p-4">
+                        <h3 class="text-white font-bold text-center text-lg flex items-center justify-center gap-2">
+                            <i data-lucide="sparkles"></i> Summary Rencana Kita <i data-lucide="sparkles"></i>
+                        </h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-pink-50 text-pink-600 border-b border-pink-100">
+                                    <th class="p-4 font-bold">Jam</th>
+                                    <th class="p-4 font-bold">Aktivitas</th>
+                                    <th class="p-4 font-bold">Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody" class="divide-y divide-pink-50 text-gray-700">
+                                <!-- Table rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="bg-pink-50 text-pink-600 border-b border-pink-100">
-                                <th class="p-4 font-bold">Jam</th>
-                                <th class="p-4 font-bold">Aktivitas</th>
-                                <th class="p-4 font-bold">Catatan</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summaryTableBody" class="divide-y divide-pink-50 text-gray-700">
-                            <!-- Table rows will be injected here -->
-                        </tbody>
-                    </table>
+                <div id="summaryEmptyMsg" class="hidden mt-4 bg-white/50 p-8 rounded-2xl text-center text-pink-300 border-2 border-dashed border-pink-200">
+                    <p>Belum ada rencana untuk ditampilkan di tabel.</p>
                 </div>
             </div>
-            <div id="summaryEmptyMsg" class="hidden mt-4 bg-white/50 p-8 rounded-2xl text-center text-pink-300 border-2 border-dashed border-pink-200">
-                <p>Belum ada rencana untuk ditampilkan di tabel.</p>
-            </div>
-        </div>
+        </main>
 
         <!-- Floating Decoration -->
         <div class="fixed bottom-4 right-4 opacity-30 pointer-events-none">
@@ -166,9 +188,9 @@
             <h2 class="text-xl font-bold text-pink-600 mb-4">Edit Rencana</h2>
             <input type="hidden" id="editIndex">
             <div class="space-y-4">
-                <input type="time" id="editTime" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
-                <input type="text" id="editTitle" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
-                <textarea id="editDesc" rows="3" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white"></textarea>
+                <input type="time" id="editTime" aria-label="Edit Time" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
+                <input type="text" id="editTitle" aria-label="Edit Title" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
+                <textarea id="editDesc" rows="3" aria-label="Edit Description" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white"></textarea>
                 <div class="flex gap-2">
                     <button onclick="closeEditModal()" class="flex-1 bg-gray-200 py-2 rounded-xl font-bold text-gray-600">Batal</button>
                     <button onclick="updateEvent()" class="flex-1 bg-pink-400 py-2 rounded-xl font-bold text-white shadow-md">Simpan</button>
@@ -180,6 +202,8 @@
     <script>
         let currentTab = 'timeline';
         let isMusicPlaying = false;
+        
+        // Mengambil data dari localStorage dengan fallback data contoh yang lebih manis
         let rundownData = JSON.parse(localStorage.getItem('anniversary_rundown')) || [
             { time: "10:00", title: "Pick Up Time! 🚗", desc: "Jemput di rumah pakai baju favorit." },
             { time: "12:00", title: "Lunch Date 🍝", desc: "Makan di tempat pertama kali kita ketemu." }
@@ -189,6 +213,7 @@
         const musicBtn = document.getElementById('musicBtn');
         const musicPulse = document.getElementById('musicPulse');
 
+        // Fungsi musik dengan penanganan error yang lebih baik
         function toggleMusic() {
             if (isMusicPlaying) {
                 bgMusic.pause();
@@ -196,16 +221,18 @@
                 musicPulse.classList.add('hidden');
                 isMusicPlaying = false;
             } else {
-                bgMusic.play().catch(e => {
-                    console.log("Gagal memutar audio:", e);
-                    alert("Klik tombol ini lagi untuk memutar musik ya! ❤️");
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add('music-active');
+                    musicPulse.classList.remove('hidden');
+                    isMusicPlaying = true;
+                }).catch(e => {
+                    console.error("Audio playback failed:", e);
+                    alert("Klik sekali lagi untuk memutar musik ya! ❤️");
                 });
-                musicBtn.classList.add('music-active');
-                musicPulse.classList.remove('hidden');
-                isMusicPlaying = true;
             }
         }
 
+        // Navigasi Tab
         function switchTab(tab) {
             currentTab = tab;
             const timelineBtn = document.getElementById('tab-timeline');
@@ -230,7 +257,9 @@
             renderViews();
         }
 
+        // Fungsi Render Utama
         function renderViews() {
+            // Urutkan berdasarkan waktu
             rundownData.sort((a, b) => a.time.localeCompare(b.time));
 
             const timelineContainer = document.getElementById('timelineView');
@@ -258,10 +287,10 @@
                         <div class="flex justify-between items-start mb-1">
                             <span class="text-pink-600 font-bold text-lg">${item.time}</span>
                             <div class="flex gap-2">
-                                <button onclick="openEditModal(${index})" class="text-blue-400 hover:text-blue-600 p-1">
+                                <button onclick="openEditModal(${index})" class="text-blue-400 hover:text-blue-600 p-1" aria-label="Edit">
                                     <i data-lucide="pencil" size="16"></i>
                                 </button>
-                                <button onclick="deleteEvent(${index})" class="text-red-400 hover:text-red-600 p-1">
+                                <button onclick="deleteEvent(${index})" class="text-red-400 hover:text-red-600 p-1" aria-label="Delete">
                                     <i data-lucide="trash-2" size="16"></i>
                                 </button>
                             </div>
@@ -273,6 +302,7 @@
                 timelineContainer.appendChild(itemEl);
             });
 
+            // Render Table Summary
             const tableBody = document.getElementById('summaryTableBody');
             tableBody.innerHTML = '';
             rundownData.forEach((item) => {
@@ -286,10 +316,12 @@
                 tableBody.appendChild(row);
             });
             
+            // Inisialisasi ulang ikon Lucide
             lucide.createIcons();
             saveToStorage();
         }
 
+        // CRUD Logic
         function saveEvent() {
             const time = document.getElementById('eventTime').value;
             const title = document.getElementById('eventTitle').value;
@@ -301,6 +333,8 @@
             }
 
             rundownData.push({ time, title, desc });
+            
+            // Reset fields
             document.getElementById('eventTime').value = '';
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventDesc').value = '';
@@ -323,14 +357,12 @@
             document.getElementById('editDesc').value = item.desc;
             
             const modal = document.getElementById('editModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            modal.classList.replace('hidden', 'flex');
         }
 
         function closeEditModal() {
             const modal = document.getElementById('editModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            modal.classList.replace('flex', 'hidden');
         }
 
         function updateEvent() {
@@ -350,9 +382,10 @@
             localStorage.setItem('anniversary_rundown', JSON.stringify(rundownData));
         }
 
-        window.onload = () => {
+        // Init on load
+        window.addEventListener('DOMContentLoaded', () => {
             renderViews();
-        };
+        });
     </script>
 </body>
 </html>
