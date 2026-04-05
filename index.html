@@ -14,44 +14,67 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Pacifico&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK & Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Konfigurasi Firebase
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'anniversary-default';
+        // Cek apakah kita di lingkungan dengan Firebase config
+        const isEnvConfigReady = typeof __firebase_config !== 'undefined';
+        window.isFirebaseActive = false;
 
-        window.db = db;
-        window.appId = appId;
-        window.auth = auth;
-        window.firestoreUtils = { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query };
-
-        // Logika Autentikasi
-        const initAuth = async () => {
+        if (isEnvConfigReady) {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Error:", error);
-            }
-        };
-        initAuth();
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'anniversary-default';
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.currentUser = user;
-                startApp();
+                window.db = db;
+                window.appId = appId;
+                window.auth = auth;
+                window.firestoreUtils = { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query };
+                window.isFirebaseActive = true;
+
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Auth Error:", error);
+                        startFallback();
+                    }
+                };
+                initAuth();
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        window.currentUser = user;
+                        startApp();
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                startFallback();
             }
-        });
+        } else {
+            // Jika tidak ada config (seperti di GitHub Pages tanpa setup)
+            startFallback();
+        }
+
+        function startFallback() {
+            console.log("Menggunakan LocalStorage Mode...");
+            window.isFirebaseActive = false;
+            // Langsung jalankan aplikasi tanpa menunggu auth
+            setTimeout(() => {
+                if (typeof window.startApp === 'function') window.startApp();
+            }, 100);
+        }
     </script>
 
     <style>
@@ -166,7 +189,7 @@
                 <textarea id="eventDesc" rows="2" placeholder="Catatan kecil..." class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 bg-white/50"></textarea>
             </div>
             <button onclick="saveEvent()" id="btnSave" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
-                <i data-lucide="plus-circle" size="20"></i> Simpan ke Jadwal Bersama
+                <i data-lucide="plus-circle" size="20"></i> Simpan ke Jadwal
             </button>
         </section>
 
@@ -229,23 +252,30 @@
             setTimeout(() => toast.classList.add('translate-x-[150%]'), 3000);
         }
 
-        async function startApp() {
-            const { db, appId, firestoreUtils } = window;
-            const eventsCol = firestoreUtils.collection(db, 'artifacts', appId, 'public', 'data', 'events');
-            
-            document.getElementById('userCounter').innerText = `ID Sesi: ${window.currentUser.uid}`;
+        window.startApp = function() {
+            if (window.isFirebaseActive) {
+                const { db, appId, firestoreUtils } = window;
+                const eventsCol = firestoreUtils.collection(db, 'artifacts', appId, 'public', 'data', 'events');
+                
+                document.getElementById('userCounter').innerText = `Cloud Sync Aktif (ID: ${window.currentUser.uid.substring(0,6)})`;
 
-            unsubscribe = firestoreUtils.onSnapshot(eventsCol, (snapshot) => {
-                rundownData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                unsubscribe = firestoreUtils.onSnapshot(eventsCol, (snapshot) => {
+                    rundownData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderViews();
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                }, (error) => {
+                    console.error("Firestore error:", error);
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                });
+            } else {
+                // LocalStorage Mode
+                document.getElementById('userCounter').innerText = "Mode Lokal (GitHub Pages)";
+                rundownData = JSON.parse(localStorage.getItem('anniversary_rundown_local')) || [];
                 renderViews();
                 document.getElementById('loadingOverlay').classList.add('hidden');
-            }, (error) => {
-                console.error("Firestore error:", error);
-                document.getElementById('loadingOverlay').classList.add('hidden');
-            });
-            
+            }
             lucide.createIcons();
-        }
+        };
 
         function toggleMusic() {
             const bgMusic = document.getElementById('bgMusic');
@@ -298,12 +328,13 @@
             if (rundownData.length === 0) {
                 timelineContainer.innerHTML = `
                     <div class="bg-white/50 p-8 rounded-2xl text-center text-pink-300 border-2 border-dashed border-pink-200 ml-0">
-                        <p>Belum ada jadwal bersama. Yuk mulai rencanakan!</p>
+                        <p>Belum ada jadwal. Yuk mulai rencanakan!</p>
                     </div>
                 `;
             }
 
             rundownData.forEach((item) => {
+                const id = item.id || item.localId;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'relative animate-fade-in-up';
                 itemEl.innerHTML = `
@@ -314,8 +345,8 @@
                         <div class="flex justify-between items-start mb-1">
                             <span class="text-pink-600 font-bold text-lg">${item.time}</span>
                             <div class="flex gap-2">
-                                <button onclick="openEditModal('${item.id}')" class="text-blue-400 hover:text-blue-600 p-1"><i data-lucide="pencil" size="16"></i></button>
-                                <button onclick="deleteEvent('${item.id}')" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" size="16"></i></button>
+                                <button onclick="openEditModal('${id}')" class="text-blue-400 hover:text-blue-600 p-1"><i data-lucide="pencil" size="16"></i></button>
+                                <button onclick="deleteEvent('${id}')" class="text-red-400 hover:text-red-600 p-1"><i data-lucide="trash-2" size="16"></i></button>
                             </div>
                         </div>
                         <h3 class="text-gray-800 font-bold text-xl mb-1">${item.title}</h3>
@@ -341,9 +372,16 @@
             const desc = document.getElementById('eventDesc').value;
             if (!time || !title) return alert("Isi jam dan judul ya! ❤️");
 
-            const { db, appId, firestoreUtils } = window;
-            const eventsCol = firestoreUtils.collection(db, 'artifacts', appId, 'public', 'data', 'events');
-            await firestoreUtils.addDoc(eventsCol, { time, title, desc, createdAt: Date.now() });
+            if (window.isFirebaseActive) {
+                const { db, appId, firestoreUtils } = window;
+                const eventsCol = firestoreUtils.collection(db, 'artifacts', appId, 'public', 'data', 'events');
+                await firestoreUtils.addDoc(eventsCol, { time, title, desc, createdAt: Date.now() });
+            } else {
+                const newEvent = { localId: Date.now().toString(), time, title, desc };
+                rundownData.push(newEvent);
+                localStorage.setItem('anniversary_rundown_local', JSON.stringify(rundownData));
+                renderViews();
+            }
             
             document.getElementById('eventTime').value = '';
             document.getElementById('eventTitle').value = '';
@@ -353,13 +391,20 @@
 
         async function deleteEvent(id) {
             if (!confirm("Hapus rencana ini? 🥺")) return;
-            const { db, appId, firestoreUtils } = window;
-            await firestoreUtils.deleteDoc(firestoreUtils.doc(db, 'artifacts', appId, 'public', 'data', 'events', id));
+            
+            if (window.isFirebaseActive) {
+                const { db, appId, firestoreUtils } = window;
+                await firestoreUtils.deleteDoc(firestoreUtils.doc(db, 'artifacts', appId, 'public', 'data', 'events', id));
+            } else {
+                rundownData = rundownData.filter(d => (d.localId || d.id) !== id);
+                localStorage.setItem('anniversary_rundown_local', JSON.stringify(rundownData));
+                renderViews();
+            }
             showToast("🗑️ Rencana dihapus.");
         }
 
         function openEditModal(id) {
-            const item = rundownData.find(d => d.id === id);
+            const item = rundownData.find(d => (d.id || d.localId) === id);
             if (!item) return;
             document.getElementById('editId').value = id;
             document.getElementById('editTime').value = item.time;
@@ -374,12 +419,23 @@
 
         async function updateEvent() {
             const id = document.getElementById('editId').value;
-            const { db, appId, firestoreUtils } = window;
-            await firestoreUtils.updateDoc(firestoreUtils.doc(db, 'artifacts', appId, 'public', 'data', 'events', id), {
-                time: document.getElementById('editTime').value,
-                title: document.getElementById('editTitle').value,
-                desc: document.getElementById('editDesc').value
-            });
+            const time = document.getElementById('editTime').value;
+            const title = document.getElementById('editTitle').value;
+            const desc = document.getElementById('editDesc').value;
+
+            if (window.isFirebaseActive) {
+                const { db, appId, firestoreUtils } = window;
+                await firestoreUtils.updateDoc(firestoreUtils.doc(db, 'artifacts', appId, 'public', 'data', 'events', id), {
+                    time, title, desc
+                });
+            } else {
+                const index = rundownData.findIndex(d => (d.id || d.localId) === id);
+                if (index !== -1) {
+                    rundownData[index] = { ...rundownData[index], time, title, desc };
+                    localStorage.setItem('anniversary_rundown_local', JSON.stringify(rundownData));
+                    renderViews();
+                }
+            }
             closeEditModal();
             showToast("✅ Jadwal diperbarui!");
         }
