@@ -1,18 +1,14 @@
-<!-- 
-  PETUNJUK GITHUB:
-  1. Pastikan nama file ini adalah index.html.
-  2. Agar data bisa DILIHAT ORANG LAIN di GitHub, Anda harus memasukkan 
-     Firebase Config Anda sendiri pada bagian "KONFIGURASI DATABASE" di bawah.
--->
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Aplikasi Rundown Anniversary Lucu untuk merencanakan momen spesial bersama pasangan.">
     <title>Our Special Anniversary Rundown ✨</title>
     
+    <!-- Ikon Hati -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💖</text></svg>">
+
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Pacifico&display=swap" rel="stylesheet">
@@ -22,7 +18,6 @@
             font-family: 'Quicksand', sans-serif;
             background: linear-gradient(135deg, #fff5f5 0%, #fff0f6 100%);
             min-height: 100vh;
-            scroll-behavior: smooth;
         }
         .font-pacifico { font-family: 'Pacifico', cursive; }
         .glass-card {
@@ -31,6 +26,11 @@
             border: 2px solid #ffdeeb;
         }
         .cute-shadow { box-shadow: 0 8px 30px rgba(255, 182, 193, 0.3); }
+        .active-tab {
+            background-color: #ffb6c1;
+            color: white;
+            box-shadow: 0 4px 10px rgba(255, 182, 193, 0.5);
+        }
         .timeline-line::before {
             content: '';
             position: absolute;
@@ -41,65 +41,29 @@
             background: #ffb6c1;
             border-radius: 2px;
         }
-        .active-tab {
-            background-color: #ffb6c1;
-            color: white;
-            box-shadow: 0 4px 10px rgba(255, 182, 193, 0.5);
-        }
-        @keyframes fade-in-up {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
-        @keyframes heart-pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        .music-active { animation: heart-pulse 1.5s ease-in-out infinite; }
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.5s ease;
-        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Layar Loading -->
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="text-center px-6">
-            <i data-lucide="heart" class="animate-bounce text-pink-400 fill-pink-200 w-12 h-12 mx-auto"></i>
-            <p class="text-pink-400 font-bold mt-2" id="loadingText">Menyiapkan Momen Indah...</p>
-            <p id="statusInfo" class="text-gray-400 text-xs mt-4">Sedang menyambungkan database...</p>
-        </div>
-    </div>
-
-    <audio id="bgMusic" loop preload="auto">
+    <!-- Musik Latar -->
+    <audio id="bgMusic" loop>
         <source src="https://www.chosic.com/wp-content/uploads/2021/04/Warm-Memories-Emotional-Inspiring-Piano.mp3" type="audio/mpeg">
     </audio>
 
+    <!-- Tombol Musik -->
     <button onclick="toggleMusic()" id="musicBtn" class="fixed bottom-6 left-6 z-50 glass-card p-4 rounded-full text-pink-500 shadow-xl border-2 border-pink-200 transition-all active:scale-95 group">
-        <div class="relative">
-            <i data-lucide="music" size="24"></i>
-            <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full hidden" id="musicPulse"></div>
-        </div>
+        <i data-lucide="music" id="musicIcon"></i>
+        <div class="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full hidden" id="musicPulse"></div>
     </button>
 
     <div class="max-w-2xl mx-auto">
+        <!-- Judul -->
         <header class="text-center mb-6">
             <h1 class="text-4xl md:text-5xl font-pacifico text-pink-500 mb-2">Anniversary Rundown</h1>
-            <div id="connectionStatus" class="inline-flex items-center gap-2 bg-white/50 px-4 py-1 rounded-full text-xs font-bold text-pink-400 border border-pink-100">
-                <span class="w-2 h-2 rounded-full bg-yellow-400" id="statusDot"></span>
-                <span id="statusLabel">Menghubungkan...</span>
-            </div>
+            <p class="text-pink-400 font-semibold italic text-sm">"Buat jadwalmu dan bagikan linknya! ✨"</p>
         </header>
 
+        <!-- Navigasi Tab -->
         <nav class="flex justify-center mb-8">
             <div class="glass-card p-1.5 rounded-2xl flex gap-2 cute-shadow">
                 <button onclick="switchTab('timeline')" id="tab-timeline" class="active-tab px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2">
@@ -111,29 +75,32 @@
             </div>
         </nav>
 
-        <section id="inputFormCard" class="glass-card rounded-3xl p-6 mb-8 cute-shadow animate-fade-in-up">
+        <!-- Form Input (Hanya di Tab Timeline) -->
+        <section id="inputFormCard" class="glass-card rounded-3xl p-6 mb-8 cute-shadow">
             <h2 class="text-xl font-bold text-pink-600 mb-4 flex items-center gap-2">
-                <i data-lucide="heart" class="fill-pink-500 text-pink-500"></i> Tambah Rencana Baru
+                <i data-lucide="heart" class="fill-pink-500 text-pink-500"></i> Rencana Baru
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="time" id="eventTime" class="px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50">
-                <input type="text" id="eventTitle" placeholder="Aktivitas Apa?" class="px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50">
+                <input type="time" id="eventTime" class="px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 outline-none">
+                <input type="text" id="eventTitle" placeholder="Aktivitas Apa?" class="px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 outline-none">
             </div>
-            <textarea id="eventDesc" rows="2" placeholder="Detail tambahan..." class="w-full mt-4 px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50"></textarea>
-            <button onclick="saveEvent()" id="submitBtn" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                <i data-lucide="plus-circle" size="20"></i> Simpan ke Jadwal
+            <textarea id="eventDesc" rows="2" placeholder="Catatan tambahan..." class="w-full mt-4 px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 outline-none"></textarea>
+            <button onclick="addEvent()" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">
+                <i data-lucide="plus-circle" size="20"></i> Tambah ke Jadwal
             </button>
         </section>
 
+        <!-- Tampilan Utama -->
         <main>
             <div id="timelineView" class="relative timeline-line pl-12 space-y-6"></div>
-            <div id="summaryView" class="hidden animate-fade-in-up">
+            
+            <div id="summaryView" class="hidden">
                 <div class="glass-card rounded-3xl overflow-hidden cute-shadow">
-                    <div class="bg-pink-400 p-4 text-white font-bold text-center">Summary Rencana Kita</div>
+                    <div class="bg-pink-400 p-4 text-white font-bold text-center">Tabel Summary</div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead class="bg-pink-50 text-pink-600 border-b border-pink-100">
-                                <tr><th class="p-4 font-bold">Jam</th><th class="p-4 font-bold">Aktivitas</th><th class="p-4 font-bold">Catatan</th></tr>
+                                <tr><th class="p-4">Jam</th><th class="p-4">Aktivitas</th><th class="p-4">Catatan</th></tr>
                             </thead>
                             <tbody id="summaryTableBody" class="divide-y divide-pink-50"></tbody>
                         </table>
@@ -141,8 +108,17 @@
                 </div>
             </div>
         </main>
+
+        <!-- Tombol Bagikan -->
+        <div class="mt-10 text-center">
+            <button onclick="generateShareLink()" class="bg-white text-pink-500 border-2 border-pink-200 px-8 py-3 rounded-2xl font-bold hover:bg-pink-50 transition-all flex items-center gap-2 mx-auto cute-shadow">
+                <i data-lucide="share-2" size="20"></i> Salin Link Berbagi
+            </button>
+            <p class="text-pink-300 text-xs mt-2 italic">Kirim link ini agar orang lain bisa melihat jadwalmu!</p>
+        </div>
     </div>
 
+    <!-- Modal Edit -->
     <div id="editModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
         <div class="glass-card bg-white w-full max-w-md rounded-3xl p-6">
             <h2 class="text-xl font-bold text-pink-600 mb-4">Edit Rencana</h2>
@@ -159,184 +135,53 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // ==========================================
-        // KONFIGURASI DATABASE
-        // ==========================================
-        let firebaseConfig = null;
-        try {
-            if (typeof __firebase_config !== 'undefined') {
-                firebaseConfig = JSON.parse(__firebase_config);
-            }
-        } catch (e) { console.warn("Cloud config missing."); }
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'anniversary-app';
-        let isCloud = !!firebaseConfig;
+    <script>
         let rundownData = [];
-        let db, auth, collectionRef;
-        let unsubscribe = null;
 
-        const hideLoading = () => {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.classList.add('hidden'), 500);
-        };
+        // Inisialisasi: Cek apakah ada data di URL atau LocalStorage
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('d');
 
-        function updateStatus(label, colorClass) {
-            document.getElementById('statusLabel').innerText = label;
-            document.getElementById('statusDot').className = `w-2 h-2 rounded-full ${colorClass}`;
-        }
-
-        const startApp = async () => {
-            if (isCloud) {
+            if (dataParam) {
                 try {
-                    const app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-                    collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'rundown');
-
-                    // Rule 3: Auth FIRST and await it
-                    const performAuth = async () => {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            return await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            return await signInAnonymously(auth);
-                        }
-                    };
-
-                    await performAuth();
-
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            updateStatus('Online', 'bg-green-400');
-                            hideLoading();
-                            setupCloudSync();
-                        } else {
-                            updateStatus('Offline', 'bg-red-400');
-                        }
-                    });
-
-                } catch (err) {
-                    console.error("Firestore Init Error:", err);
-                    setupLocalMode();
+                    // Decode data dari URL
+                    rundownData = JSON.parse(decodeURIComponent(escape(atob(dataParam))));
+                } catch (e) {
+                    console.error("Gagal memuat data dari link.");
+                    loadFromLocal();
                 }
             } else {
-                setupLocalMode();
+                loadFromLocal();
             }
+
+            if (rundownData.length === 0) {
+                rundownData = [{ id: '1', time: "19:00", title: "Contoh: Makan Malam ✨", desc: "Tempat favorit kita." }];
+            }
+
+            renderViews();
+            lucide.createIcons();
         };
 
-        function setupCloudSync() {
-            // Guard Firestore operation with user check
-            if (!auth.currentUser) return;
-
-            if (unsubscribe) unsubscribe();
-
-            unsubscribe = onSnapshot(collectionRef, 
-                (snapshot) => {
-                    rundownData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    renderViews();
-                }, 
-                (err) => {
-                    console.error("Permission Error or Sync Failed:", err);
-                    if (err.code === 'permission-denied') {
-                        updateStatus('Izin Ditolak', 'bg-red-400');
-                    }
-                }
-            );
-
-            window.saveEvent = async () => {
-                if (!auth.currentUser) return;
-                const time = document.getElementById('eventTime').value;
-                const title = document.getElementById('eventTitle').value;
-                const desc = document.getElementById('eventDesc').value;
-                if (!time || !title) return alert("Isi jam dan judul! ❤️");
-                try {
-                    await addDoc(collectionRef, { time, title, desc, ts: Date.now() });
-                    clearForm();
-                } catch (e) {
-                    console.error("Save Error:", e);
-                }
-            };
-
-            window.deleteEvent = async (id) => {
-                if (!auth.currentUser) return;
-                if (confirm("Hapus?")) {
-                    try {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id));
-                    } catch (e) {
-                        console.error("Delete Error:", e);
-                    }
-                }
-            };
-
-            window.updateEvent = async () => {
-                if (!auth.currentUser) return;
-                const id = document.getElementById('editId').value;
-                const time = document.getElementById('editTime').value;
-                const title = document.getElementById('editTitle').value;
-                const desc = document.getElementById('editDesc').value;
-                try {
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id), { time, title, desc });
-                    closeEditModal();
-                } catch (e) {
-                    console.error("Update Error:", e);
-                }
-            };
+        function loadFromLocal() {
+            const local = localStorage.getItem('ann_rundown');
+            if (local) rundownData = JSON.parse(local);
         }
 
-        function setupLocalMode() {
-            isCloud = false;
-            updateStatus('Mode Offline (Lokal)', 'bg-orange-400');
-            hideLoading();
-            rundownData = JSON.parse(localStorage.getItem('ann_rundown_local')) || [];
-            renderViews();
-
-            window.saveEvent = () => {
-                const time = document.getElementById('eventTime').value;
-                const title = document.getElementById('eventTitle').value;
-                const desc = document.getElementById('eventDesc').value;
-                if (!time || !title) return alert("Isi jam dan judul! ❤️");
-                rundownData.push({ id: Date.now().toString(), time, title, desc });
-                syncLocal();
-                clearForm();
-            };
-
-            window.deleteEvent = (id) => {
-                if (confirm("Hapus?")) {
-                    rundownData = rundownData.filter(d => d.id !== id);
-                    syncLocal();
-                }
-            };
-
-            window.updateEvent = () => {
-                const id = document.getElementById('editId').value;
-                const idx = rundownData.findIndex(d => d.id === id);
-                if (idx !== -1) {
-                    rundownData[idx] = { ...rundownData[idx], time: document.getElementById('editTime').value, title: document.getElementById('editTitle').value, desc: document.getElementById('editDesc').value };
-                    syncLocal();
-                    closeEditModal();
-                }
-            };
-        }
-
-        function syncLocal() {
-            localStorage.setItem('ann_rundown_local', JSON.stringify(rundownData));
-            renderViews();
+        function saveToLocal() {
+            localStorage.setItem('ann_rundown', JSON.stringify(rundownData));
         }
 
         function renderViews() {
             rundownData.sort((a, b) => a.time.localeCompare(b.time));
-            const container = document.getElementById('timelineView');
-            container.innerHTML = rundownData.length ? '' : '<p class="text-center text-pink-300 py-10">Belum ada rencana spesial...</p>';
-            
+
+            // Render Timeline
+            const timeline = document.getElementById('timelineView');
+            timeline.innerHTML = '';
             rundownData.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'relative animate-fade-in-up';
-                el.innerHTML = `
+                const div = document.createElement('div');
+                div.className = 'relative animate-fade-in-up';
+                div.innerHTML = `
                     <div class="absolute -left-[44px] top-4 w-10 h-10 bg-pink-400 rounded-full flex items-center justify-center border-4 border-white shadow-md z-10"><i data-lucide="star" class="text-white fill-white" size="16"></i></div>
                     <div class="glass-card rounded-2xl p-5 cute-shadow">
                         <div class="flex justify-between items-start mb-1">
@@ -349,26 +194,43 @@
                         <h3 class="text-gray-800 font-bold text-xl">${item.title}</h3>
                         <p class="text-gray-500 text-sm italic">${item.desc || '-'}</p>
                     </div>`;
-                container.appendChild(el);
+                timeline.appendChild(div);
             });
 
-            document.getElementById('summaryTableBody').innerHTML = rundownData.map(item => `
+            // Render Table
+            const table = document.getElementById('summaryTableBody');
+            table.innerHTML = rundownData.map(item => `
                 <tr class="hover:bg-pink-50">
                     <td class="p-4 font-bold text-pink-500">${item.time}</td>
-                    <td class="p-4 font-bold text-sm">${item.title}</td>
+                    <td class="p-4 font-bold">${item.title}</td>
                     <td class="p-4 text-xs text-gray-500 italic">${item.desc || '-'}</td>
                 </tr>`).join('');
             
             lucide.createIcons();
+            saveToLocal();
         }
 
-        function clearForm() {
+        function addEvent() {
+            const time = document.getElementById('eventTime').value;
+            const title = document.getElementById('eventTitle').value;
+            const desc = document.getElementById('eventDesc').value;
+            if (!time || !title) return alert("Isi jam dan judul ya! ❤️");
+
+            rundownData.push({ id: Date.now().toString(), time, title, desc });
             document.getElementById('eventTime').value = '';
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventDesc').value = '';
+            renderViews();
         }
 
-        window.openEditModal = (id) => {
+        function deleteEvent(id) {
+            if (confirm("Hapus rencana ini?")) {
+                rundownData = rundownData.filter(d => d.id !== id);
+                renderViews();
+            }
+        }
+
+        function openEditModal(id) {
             const item = rundownData.find(d => d.id === id);
             if (!item) return;
             document.getElementById('editId').value = id;
@@ -376,37 +238,64 @@
             document.getElementById('editTitle').value = item.title;
             document.getElementById('editDesc').value = item.desc;
             document.getElementById('editModal').classList.replace('hidden', 'flex');
-        };
+        }
 
-        window.closeEditModal = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
+        function closeEditModal() {
+            document.getElementById('editModal').classList.replace('flex', 'hidden');
+        }
 
-        window.switchTab = (tab) => {
+        function updateEvent() {
+            const id = document.getElementById('editId').value;
+            const idx = rundownData.findIndex(d => d.id === id);
+            if (idx !== -1) {
+                rundownData[idx] = {
+                    id,
+                    time: document.getElementById('editTime').value,
+                    title: document.getElementById('editTitle').value,
+                    desc: document.getElementById('editDesc').value
+                };
+                closeEditModal();
+                renderViews();
+            }
+        }
+
+        function switchTab(tab) {
             const isTimeline = tab === 'timeline';
             document.getElementById('tab-timeline').className = isTimeline ? 'active-tab px-6 py-2 rounded-xl font-bold flex items-center gap-2' : 'text-pink-400 px-6 py-2 rounded-xl font-bold flex items-center gap-2';
             document.getElementById('tab-summary').className = !isTimeline ? 'active-tab px-6 py-2 rounded-xl font-bold flex items-center gap-2' : 'text-pink-400 px-6 py-2 rounded-xl font-bold flex items-center gap-2';
             document.getElementById('timelineView').classList.toggle('hidden', !isTimeline);
             document.getElementById('summaryView').classList.toggle('hidden', isTimeline);
             document.getElementById('inputFormCard').classList.toggle('hidden', !isTimeline);
-        };
+        }
 
-        window.toggleMusic = () => {
+        function toggleMusic() {
             const music = document.getElementById('bgMusic');
             const pulse = document.getElementById('musicPulse');
             if (music.paused) {
-                music.play().then(() => {
-                    document.getElementById('musicBtn').classList.add('music-active');
-                    pulse.classList.remove('hidden');
-                }).catch(() => alert("Klik lagi untuk memutar musik! ❤️"));
+                music.play().then(() => pulse.classList.remove('hidden'));
             } else {
                 music.pause();
-                document.getElementById('musicBtn').classList.remove('music-active');
                 pulse.classList.add('hidden');
             }
-        };
+        }
 
-        // Mulai aplikasi
-        startApp();
-        lucide.createIcons();
+        // FUNGSI UTAMA UNTUK BERBAGI
+        function generateShareLink() {
+            const dataStr = JSON.stringify(rundownData);
+            // Encode data ke Base64 (agar aman di URL)
+            const encoded = btoa(unescape(encodeURIComponent(dataStr)));
+            const shareUrl = window.location.origin + window.location.pathname + "?d=" + encoded;
+            
+            // Salin ke clipboard
+            const el = document.createElement('textarea');
+            el.value = shareUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            alert("Link berhasil disalin! Kirim link tersebut ke pasanganmu agar dia bisa melihat jadwal yang sama. ❤️");
+        }
     </script>
 </body>
 </html>
