@@ -1,7 +1,7 @@
 <!-- 
-  PENTING UNTUK GITHUB PAGES:
-  Agar website ini bisa diakses langsung, pastikan saat mengunggah ke GitHub, 
-  kamu mengubah nama file ini menjadi: index.html 
+  PENTING: 
+  1. Pastikan nama file ini adalah index.html saat diunggah ke GitHub.
+  2. Data sekarang disimpan di Cloud Database sehingga bisa dilihat oleh orang lain.
 -->
 <!DOCTYPE html>
 <html lang="id">
@@ -60,7 +60,6 @@
         .animate-fade-in-up {
             animation: fade-in-up 0.4s ease-out forwards;
         }
-        /* Animasi berdenyut untuk tombol musik saat aktif */
         @keyframes heart-pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
@@ -69,7 +68,6 @@
         .music-active {
             animation: heart-pulse 1.5s ease-in-out infinite;
         }
-        /* Mengatur tampilan scrollbar agar tetap lucu */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -80,11 +78,29 @@
             background: #ffb6c1;
             border-radius: 10px;
         }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- Audio Element (Romantic Background Music) -->
+    <!-- Loading Screen -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="text-center">
+            <i data-lucide="heart" class="animate-bounce text-pink-400 fill-pink-200 w-12 h-12 mx-auto"></i>
+            <p class="text-pink-400 font-bold mt-2">Menghubungkan ke Cloud...</p>
+        </div>
+    </div>
+
+    <!-- Audio Element -->
     <audio id="bgMusic" loop preload="auto">
         <source src="https://www.chosic.com/wp-content/uploads/2021/04/Warm-Memories-Emotional-Inspiring-Piano.mp3" type="audio/mpeg">
     </audio>
@@ -104,7 +120,7 @@
         <!-- Header -->
         <header class="text-center mb-6">
             <h1 class="text-4xl md:text-5xl font-pacifico text-pink-500 mb-2">Anniversary Rundown</h1>
-            <p class="text-pink-400 font-semibold italic">"Membuat setiap detik menjadi kenangan indah..." ✨</p>
+            <p class="text-pink-400 font-semibold italic text-sm md:text-base">"Data tersimpan di Cloud agar kita berdua bisa melihat!" ✨</p>
         </header>
 
         <!-- Tab Navigation -->
@@ -141,7 +157,7 @@
                 <label for="eventDesc" class="block text-sm font-bold text-pink-400 mb-1">Detail Tambahan (Opsional)</label>
                 <textarea id="eventDesc" rows="2" placeholder="Lokasi atau catatan kecil..." class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 focus:border-pink-300 focus:outline-none bg-white/50"></textarea>
             </div>
-            <button onclick="saveEvent()" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200">
+            <button id="submitBtn" onclick="saveEvent()" class="mt-4 w-full bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-pink-200 disabled:opacity-50">
                 <i data-lucide="plus-circle" size="20"></i>
                 Simpan ke Jadwal
             </button>
@@ -191,52 +207,180 @@
     <div id="editModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
         <div class="glass-card bg-white w-full max-w-md rounded-3xl p-6">
             <h2 class="text-xl font-bold text-pink-600 mb-4">Edit Rencana</h2>
-            <input type="hidden" id="editIndex">
+            <input type="hidden" id="editId">
             <div class="space-y-4">
-                <input type="time" id="editTime" aria-label="Edit Time" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
-                <input type="text" id="editTitle" aria-label="Edit Title" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
-                <textarea id="editDesc" rows="3" aria-label="Edit Description" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white"></textarea>
+                <input type="time" id="editTime" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
+                <input type="text" id="editTitle" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white">
+                <textarea id="editDesc" rows="3" class="w-full px-4 py-2 rounded-xl border-2 border-pink-100 bg-white"></textarea>
                 <div class="flex gap-2">
                     <button onclick="closeEditModal()" class="flex-1 bg-gray-200 py-2 rounded-xl font-bold text-gray-600">Batal</button>
-                    <button onclick="updateEvent()" class="flex-1 bg-pink-400 py-2 rounded-xl font-bold text-white shadow-md">Simpan</button>
+                    <button id="updateBtn" onclick="updateEvent()" class="flex-1 bg-pink-400 py-2 rounded-xl font-bold text-white shadow-md">Simpan</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let currentTab = 'timeline';
-        let isMusicPlaying = false;
-        
-        let rundownData = JSON.parse(localStorage.getItem('anniversary_rundown')) || [
-            { time: "10:00", title: "Pick Up Time! 🚗", desc: "Jemput di rumah pakai baju favorit." },
-            { time: "12:00", title: "Lunch Date 🍝", desc: "Makan di tempat pertama kali kita ketemu." }
-        ];
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const bgMusic = document.getElementById('bgMusic');
-        const musicBtn = document.getElementById('musicBtn');
-        const musicPulse = document.getElementById('musicPulse');
+        // Firebase Configuration (Global Variables provided by the environment)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        function toggleMusic() {
-            if (isMusicPlaying) {
-                bgMusic.pause();
-                musicBtn.classList.remove('music-active');
-                musicPulse.classList.add('hidden');
-                isMusicPlaying = false;
-            } else {
-                bgMusic.play().then(() => {
-                    musicBtn.classList.add('music-active');
-                    musicPulse.classList.remove('hidden');
-                    isMusicPlaying = true;
-                }).catch(e => {
-                    console.error("Audio playback failed:", e);
-                    alert("Klik sekali lagi untuk memutar musik ya! ❤️");
-                });
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // State
+        let rundownData = [];
+        let user = null;
+        let unsubscribeStore = null;
+
+        // Path Koleksi Publik (Sesuai Rule 1)
+        const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'rundown');
+
+        // Authentication Flow (Sesuai Rule 3)
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth failed:", error);
+                document.getElementById('loadingOverlay').innerHTML = `<div class="text-center p-4">
+                    <p class="text-red-500 font-bold">Gagal terhubung. Coba refresh halaman.</p>
+                </div>`;
             }
+        };
+
+        // Listen for Auth changes
+        onAuthStateChanged(auth, (authUser) => {
+            user = authUser;
+            if (user) {
+                document.getElementById('loadingOverlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 500);
+                setupRealtimeListener();
+            }
+        });
+
+        // Start Auth
+        initAuth();
+
+        // Real-time Data Listener (Protected by User check)
+        function setupRealtimeListener() {
+            if (!user) return;
+            
+            if (unsubscribeStore) unsubscribeStore();
+
+            unsubscribeStore = onSnapshot(collectionPath, (snapshot) => {
+                rundownData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                renderViews();
+            }, (error) => {
+                console.error("Firestore sync error:", error);
+                if (error.code === 'permission-denied') {
+                    console.log("Mencoba login ulang karena masalah izin...");
+                    initAuth();
+                }
+            });
         }
 
-        function switchTab(tab) {
-            currentTab = tab;
+        // Global functions for HTML access
+        window.saveEvent = async () => {
+            if (!user) {
+                alert("Harap tunggu hingga koneksi database stabil...");
+                return;
+            }
+            
+            const time = document.getElementById('eventTime').value;
+            const title = document.getElementById('eventTitle').value;
+            const desc = document.getElementById('eventDesc').value;
+
+            if (!time || !title) {
+                alert("Jam dan Judul harus diisi ya! ❤️");
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+
+            try {
+                await addDoc(collectionPath, { 
+                    time, 
+                    title, 
+                    desc, 
+                    createdAt: Date.now(),
+                    createdBy: user.uid
+                });
+                document.getElementById('eventTime').value = '';
+                document.getElementById('eventTitle').value = '';
+                document.getElementById('eventDesc').value = '';
+            } catch (err) {
+                console.error("Error saving:", err);
+                alert("Gagal menyimpan data. Periksa koneksi internet.");
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.deleteEvent = async (id) => {
+            if (!user) return;
+            if (confirm("Hapus rencana ini? 🥺")) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id);
+                    await deleteDoc(docRef);
+                } catch (err) {
+                    console.error("Error deleting:", err);
+                }
+            }
+        };
+
+        window.openEditModal = (id) => {
+            const item = rundownData.find(d => d.id === id);
+            if (!item) return;
+            document.getElementById('editId').value = id;
+            document.getElementById('editTime').value = item.time;
+            document.getElementById('editTitle').value = item.title;
+            document.getElementById('editDesc').value = item.desc;
+            document.getElementById('editModal').classList.replace('hidden', 'flex');
+        };
+
+        window.closeEditModal = () => {
+            document.getElementById('editModal').classList.replace('flex', 'hidden');
+        };
+
+        window.updateEvent = async () => {
+            if (!user) return;
+            const id = document.getElementById('editId').value;
+            const time = document.getElementById('editTime').value;
+            const title = document.getElementById('editTitle').value;
+            const desc = document.getElementById('editDesc').value;
+
+            if (!time || !title) return;
+
+            const btn = document.getElementById('updateBtn');
+            btn.disabled = true;
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'rundown', id);
+                await updateDoc(docRef, { time, title, desc });
+                closeEditModal();
+            } catch (err) {
+                console.error("Error updating:", err);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.switchTab = (tab) => {
             const timelineBtn = document.getElementById('tab-timeline');
             const summaryBtn = document.getElementById('tab-summary');
             const timelineView = document.getElementById('timelineView');
@@ -256,10 +400,27 @@
                 summaryView.classList.remove('hidden');
                 inputFormCard.classList.add('hidden');
             }
-            renderViews();
-        }
+        };
+
+        window.toggleMusic = () => {
+            const bgMusic = document.getElementById('bgMusic');
+            const musicBtn = document.getElementById('musicBtn');
+            const musicPulse = document.getElementById('musicPulse');
+            
+            if (!bgMusic.paused) {
+                bgMusic.pause();
+                musicBtn.classList.remove('music-active');
+                musicPulse.classList.add('hidden');
+            } else {
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add('music-active');
+                    musicPulse.classList.remove('hidden');
+                }).catch(e => console.log("Audio play deferred until user interaction"));
+            }
+        };
 
         function renderViews() {
+            // Sort by time in-memory
             rundownData.sort((a, b) => a.time.localeCompare(b.time));
 
             const timelineContainer = document.getElementById('timelineView');
@@ -276,7 +437,7 @@
                 document.getElementById('summaryEmptyMsg').classList.add('hidden');
             }
 
-            rundownData.forEach((item, index) => {
+            rundownData.forEach((item) => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'relative animate-fade-in-up';
                 itemEl.innerHTML = `
@@ -287,10 +448,10 @@
                         <div class="flex justify-between items-start mb-1">
                             <span class="text-pink-600 font-bold text-lg">${item.time}</span>
                             <div class="flex gap-2">
-                                <button onclick="openEditModal(${index})" class="text-blue-400 hover:text-blue-600 p-1" aria-label="Edit">
+                                <button onclick="openEditModal('${item.id}')" class="text-blue-400 hover:text-blue-600 p-1">
                                     <i data-lucide="pencil" size="16"></i>
                                 </button>
-                                <button onclick="deleteEvent(${index})" class="text-red-400 hover:text-red-600 p-1" aria-label="Delete">
+                                <button onclick="deleteEvent('${item.id}')" class="text-red-400 hover:text-red-600 p-1">
                                     <i data-lucide="trash-2" size="16"></i>
                                 </button>
                             </div>
@@ -309,78 +470,14 @@
                 row.className = 'hover:bg-pink-50/50 transition-colors';
                 row.innerHTML = `
                     <td class="p-4 font-bold text-pink-500 whitespace-nowrap">${item.time}</td>
-                    <td class="p-4 font-bold">${item.title}</td>
-                    <td class="p-4 text-sm text-gray-500 italic">${item.desc || '-'}</td>
+                    <td class="p-4 font-bold text-sm md:text-base">${item.title}</td>
+                    <td class="p-4 text-xs md:text-sm text-gray-500 italic">${item.desc || '-'}</td>
                 `;
                 tableBody.appendChild(row);
             });
             
             lucide.createIcons();
-            saveToStorage();
         }
-
-        function saveEvent() {
-            const time = document.getElementById('eventTime').value;
-            const title = document.getElementById('eventTitle').value;
-            const desc = document.getElementById('eventDesc').value;
-
-            if (!time || !title) {
-                alert("Jam dan Judul harus diisi ya! ❤️");
-                return;
-            }
-
-            rundownData.push({ time, title, desc });
-            
-            document.getElementById('eventTime').value = '';
-            document.getElementById('eventTitle').value = '';
-            document.getElementById('eventDesc').value = '';
-            
-            renderViews();
-        }
-
-        function deleteEvent(index) {
-            if (confirm("Hapus rencana ini? 🥺")) {
-                rundownData.splice(index, 1);
-                renderViews();
-            }
-        }
-
-        function openEditModal(index) {
-            const item = rundownData[index];
-            document.getElementById('editIndex').value = index;
-            document.getElementById('editTime').value = item.time;
-            document.getElementById('editTitle').value = item.title;
-            document.getElementById('editDesc').value = item.desc;
-            
-            const modal = document.getElementById('editModal');
-            modal.classList.replace('hidden', 'flex');
-        }
-
-        function closeEditModal() {
-            const modal = document.getElementById('editModal');
-            modal.classList.replace('flex', 'hidden');
-        }
-
-        function updateEvent() {
-            const index = document.getElementById('editIndex').value;
-            const time = document.getElementById('editTime').value;
-            const title = document.getElementById('editTitle').value;
-            const desc = document.getElementById('editDesc').value;
-
-            if (!time || !title) return;
-
-            rundownData[index] = { time, title, desc };
-            closeEditModal();
-            renderViews();
-        }
-
-        function saveToStorage() {
-            localStorage.setItem('anniversary_rundown', JSON.stringify(rundownData));
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            renderViews();
-        });
     </script>
 </body>
 </html>
