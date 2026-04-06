@@ -16,6 +16,7 @@
             background: #fff3f5;
             min-height: 100vh;
             color: #4a4a4a;
+            overflow-x: hidden;
         }
         .font-pacifico { font-family: 'Pacifico', cursive; }
         
@@ -31,17 +32,18 @@
             box-shadow: 0 4px 12px rgba(255, 159, 178, 0.3);
         }
 
+        /* Jarak Timeline diperbaiki agar lebih lega */
         .timeline-item {
             position: relative;
             padding-left: 45px;
-            margin-bottom: 24px;
+            margin-bottom: 70px; /* Jarak antar kartu ditambah */
         }
         .timeline-item::before {
             content: '';
             position: absolute;
             left: 17px;
             top: 0;
-            bottom: -24px;
+            bottom: -70px; /* Menyesuaikan jarak baru */
             width: 2px;
             background: #ffd1dc;
         }
@@ -90,7 +92,9 @@
             justify-content: center;
             gap: 8px;
             box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);
+            transition: transform 0.2s;
         }
+        .btn-save:active { transform: scale(0.95); }
 
         .badge {
             font-size: 10px;
@@ -103,6 +107,40 @@
         }
         .badge-date { background: #ffeef2; color: #ff7ea0; border: 1px solid #ffe1e8; }
         .badge-time { background: #ff7ea0; color: white; }
+
+        /* Floating Flower Spam Button */
+        .btn-flower-spam {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: #ff9fb2;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(255, 159, 178, 0.5);
+            cursor: pointer;
+            z-index: 50;
+            transition: all 0.3s;
+        }
+        .btn-flower-spam:hover { transform: scale(1.1) rotate(15deg); background: #f472b6; }
+        .btn-flower-spam:active { transform: scale(0.9); }
+
+        /* Flower Animation */
+        .flower {
+            position: fixed;
+            top: -50px;
+            pointer-events: none;
+            z-index: 100;
+            user-select: none;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(360deg); }
+        }
 
         .loading-screen {
             position: fixed;
@@ -132,6 +170,11 @@
             <i data-lucide="heart" class="fill-current w-12 h-12"></i>
         </div>
         <p class="mt-4 font-bold text-pink-500">Sinkronisasi Rencana...</p>
+    </div>
+
+    <!-- Tombol Spam Bunga -->
+    <div onclick="spawnFlowers(30)" class="btn-flower-spam">
+        <i data-lucide="flower" class="w-6 h-6"></i>
     </div>
 
     <div class="max-w-lg mx-auto">
@@ -244,10 +287,29 @@
 
         const toggleLoader = (show) => document.getElementById('loader').classList.toggle('hidden', !show);
 
+        // Efek Bunga Berguguran
+        function spawnFlowers(count = 20) {
+            const flowers = ['🌸', '🌺', '🌷', '🌹', '🌼', '✨'];
+            for(let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const flower = document.createElement('div');
+                    flower.className = 'flower';
+                    flower.innerText = flowers[Math.floor(Math.random() * flowers.length)];
+                    flower.style.left = Math.random() * 100 + 'vw';
+                    flower.style.fontSize = (Math.random() * 20 + 15) + 'px';
+                    flower.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    flower.style.opacity = Math.random() * 0.5 + 0.5;
+                    document.body.appendChild(flower);
+                    
+                    // Hapus elemen setelah animasi selesai
+                    setTimeout(() => flower.remove(), 5000);
+                }, i * 100);
+            }
+        }
+
         function formatDisplayDate(dateStr) {
             if (!dateStr || dateStr.toString().includes("1899")) return "No Date";
             try {
-                // Gunakan format UTC atau ISO untuk memastikan konsistensi
                 const date = new Date(dateStr);
                 if (isNaN(date.getTime())) return "No Date";
                 return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
@@ -258,8 +320,6 @@
             if (!timeStr) return "00:00";
             let str = timeStr.toString();
             
-            // Perbaikan Utama: Jika string mengandung format ISO (T)
-            // Kita gunakan objek Date agar browser mengonversi UTC ke waktu lokal pengguna secara otomatis
             if (str.includes('T')) {
                 const dateObj = new Date(str);
                 if (!isNaN(dateObj.getTime())) {
@@ -269,13 +329,11 @@
                 }
             }
             
-            // Jika data hanya berupa string jam (HH:mm)
             const timeMatch = str.match(/(\d{2}:\d{2})/);
             if (timeMatch) {
                 return timeMatch[1];
             }
             
-            // Fallback
             if (str.startsWith("1899")) return "00:00";
             return str.substring(0, 5);
         }
@@ -315,6 +373,10 @@
                 });
                 document.getElementById('eventTitle').value = '';
                 document.getElementById('eventDesc').value = '';
+                
+                // Trigger Bunga Berguguran otomatis
+                spawnFlowers(25);
+                
                 await fetchEvents();
             } catch (e) { console.error(e); }
             finally { toggleLoader(false); }
@@ -333,6 +395,7 @@
                     body: JSON.stringify({ action: 'update', data: { id, date, time, title, desc } })
                 });
                 closeEditModal();
+                spawnFlowers(15); // Sedikit bunga saat update
                 await fetchEvents();
             } catch (e) { console.error(e); }
             finally { toggleLoader(false); }
@@ -352,7 +415,6 @@
         }
 
         function render() {
-            // Sort data berdasarkan waktu nyata
             rundownData.sort((a, b) => {
                 const da = new Date((a.date || '1970-01-01').split('T')[0] + 'T' + formatTime(a.time));
                 const db = new Date((b.date || '1970-01-01').split('T')[0] + 'T' + formatTime(b.time));
