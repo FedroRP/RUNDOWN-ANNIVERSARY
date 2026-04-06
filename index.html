@@ -245,8 +245,9 @@
         const toggleLoader = (show) => document.getElementById('loader').classList.toggle('hidden', !show);
 
         function formatDisplayDate(dateStr) {
-            if (!dateStr || dateStr.includes("1899")) return "Today";
+            if (!dateStr || dateStr.toString().includes("1899")) return "No Date";
             try {
+                // Gunakan format UTC atau ISO untuk memastikan konsistensi
                 const date = new Date(dateStr);
                 if (isNaN(date.getTime())) return "No Date";
                 return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
@@ -257,18 +258,24 @@
             if (!timeStr) return "00:00";
             let str = timeStr.toString();
             
-            // Jika format ISO (ada 'T'), ambil bagian jamnya saja
+            // Perbaikan Utama: Jika string mengandung format ISO (T)
+            // Kita gunakan objek Date agar browser mengonversi UTC ke waktu lokal pengguna secara otomatis
             if (str.includes('T')) {
-                str = str.split('T')[1];
+                const dateObj = new Date(str);
+                if (!isNaN(dateObj.getTime())) {
+                    const hours = dateObj.getHours().toString().padStart(2, '0');
+                    const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+                    return `${hours}:${minutes}`;
+                }
             }
             
-            // Gunakan RegEx untuk mencari format HH:mm di dalam string
+            // Jika data hanya berupa string jam (HH:mm)
             const timeMatch = str.match(/(\d{2}:\d{2})/);
             if (timeMatch) {
                 return timeMatch[1];
             }
             
-            // Fallback: jika tidak ada kecocokan, ambil 5 karakter pertama tapi pastikan bukan "1899"
+            // Fallback
             if (str.startsWith("1899")) return "00:00";
             return str.substring(0, 5);
         }
@@ -345,9 +352,10 @@
         }
 
         function render() {
+            // Sort data berdasarkan waktu nyata
             rundownData.sort((a, b) => {
-                const da = new Date((a.date || '1970-01-01').split('T')[0] + 'T' + (a.time || '00:00'));
-                const db = new Date((b.date || '1970-01-01').split('T')[0] + 'T' + (b.time || '00:00'));
+                const da = new Date((a.date || '1970-01-01').split('T')[0] + 'T' + formatTime(a.time));
+                const db = new Date((b.date || '1970-01-01').split('T')[0] + 'T' + formatTime(b.time));
                 return da - db;
             });
 
